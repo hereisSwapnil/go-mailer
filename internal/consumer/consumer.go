@@ -6,55 +6,75 @@ import (
 	"html/template"
 	"log/slog"
 	"net/smtp"
+	"time"
 
 	"github.com/hereisSwapnil/go-mailer/internal/config"
 	"github.com/hereisSwapnil/go-mailer/internal/types"
 )
 
 func EmailWorker(workerId int, emailChannel chan types.Recipient, cfg *config.Config) error {
-
 	auth := smtp.PlainAuth("", cfg.SMTP.Username, cfg.SMTP.Password, cfg.SMTP.Host)
 
-	// Parse the email template only once
 	t, err := template.ParseFiles(cfg.Templates.TestEmailTemplate)
 	if err != nil {
 		return err
 	}
 
 	for recipient := range emailChannel {
-		slog.Info("Worker: Processing recipient", "workerId", workerId, "recipient", recipient.Email)
+		slog.Info("Processing recipient", "workerId", workerId, "email", recipient.Email)
 
-		// Prepare recipient specific data
 		data := map[string]interface{}{
-			"Name":    recipient.Name,
+			"Name": recipient.Name,
 		}
 
-		// Render subject template
 		var subjectBuffer bytes.Buffer
-		err := t.ExecuteTemplate(&subjectBuffer, "subject", data)
-		if err != nil {
-			return fmt.Errorf("subject template execution failed for recipient %s: %w", recipient.Name, err)
+		if err := t.ExecuteTemplate(&subjectBuffer, "subject", data); err != nil {
+			return fmt.Errorf("Subject template error (%s): %w", recipient.Email, err)
 		}
 
-		// Render HTML body template
 		var bodyBuffer bytes.Buffer
-		err = t.ExecuteTemplate(&bodyBuffer, "html", data)
-		if err != nil {
-			return fmt.Errorf("html template execution failed for recipient %s: %w", recipient.Name, err)
+		if err := t.ExecuteTemplate(&bodyBuffer, "html", data); err != nil {
+			return fmt.Errorf("HTML template error (%s): %w", recipient.Email, err)
 		}
 
-		// Compose email headers and body
 		subject := fmt.Sprintf("Subject: %s\r\n", subjectBuffer.String())
 		mime := "MIME-Version: 1.0;\r\nContent-Type: text/html; charset=\"UTF-8\";\r\n\r\n"
 		message := []byte(subject + mime + bodyBuffer.String())
 
-		// Send to the actual recipient
 		to := []string{recipient.Email}
-		err = smtp.SendMail(fmt.Sprintf("%s:%d", cfg.SMTP.Host, cfg.SMTP.Port), auth, cfg.SMTP.From, to, message)
-		if err != nil {
-			return fmt.Errorf("failed to send to %s: %w", recipient.Email, err)
+
+		// Retry loop
+		delay := time.Duration(cfg.Retry.InitialDelay) * time.Second
+
+		for attempt := 1; attempt <= cfg.Retry.MaxRetries; attempt++ {
+			err := smtp.SendMail(fmt.Sprintf("%s:%d", cfg.SMTP.Host, cfg.SMTP.Port), auth, cfg.SMTP.From, to, message)
+			if err == nil {
+				slog.Info("Email sent", "workerId", workerId, "email", recipient.Email, "attempt", attempt)
+				break
+			}
+
+			// Last attempt → return error
+			if attempt == cfg.Retry.MaxRetries {
+				return fmt.Errorf("Failed after %d retries to send to %s: %w", attempt, recipient.Email, err)
+			}
+
+			slog.Warn("Email send failed, retrying...",
+				"workerId", workerId,
+				"email", recipient.Email,
+				"retry", attempt,
+				"wait_seconds", delay.Seconds(),
+				"err", err.Error(),
+			)
+
+			time.Sleep(delay)
+
+			delay = time.Duration(float64(delay) * cfg.Retry.BackoffMultiplier)
+
+			maxDelay := time.Duration(cfg.Retry.MaxDelay) * time.Second
+			if delay > maxDelay {
+				delay = maxDelay
+			}
 		}
-		slog.Info("Worker: Sent email to recipient", "workerId", workerId, "recipient", recipient.Email)
 	}
 
 	return nil

@@ -28,10 +28,18 @@ type Data struct {
 	CSVFilePath string `yaml:"csv_file_path" validate:"required"`
 }
 
+type Retry struct {
+	MaxRetries      int `yaml:"max_retries" validate:"min=0,max=10"`
+	InitialDelay    int `yaml:"initial_delay_seconds" validate:"min=1"` // in seconds
+	BackoffMultiplier float64 `yaml:"backoff_multiplier" validate:"min=1"`
+	MaxDelay        int `yaml:"max_delay_seconds" validate:"min=1"` // in seconds
+}
+
 type Config struct {
 	SMTP      SMTP      `yaml:"smtp" validate:"required"`
 	Templates Templates `yaml:"templates" validate:"required"`
 	Data      Data      `yaml:"data" validate:"required"`
+	Retry     Retry     `yaml:"retry" validate:"required"`
 }
 
 func LoadConfig() *Config {
