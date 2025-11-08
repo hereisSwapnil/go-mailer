@@ -1,8 +1,7 @@
 package main
 
 import (
-	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 
 	"github.com/hereisSwapnil/go-mailer/internal/config"
@@ -13,7 +12,7 @@ import (
 
 func main() {
 	cfg := config.LoadConfig()
-	fmt.Println("Config loaded successfully!")
+	slog.Info("Config loaded successfully! 🚀")
 
 	EmailChannel := make(chan types.Recipient)
 
@@ -24,20 +23,22 @@ func main() {
 		defer wg.Done()
 		defer close(EmailChannel)
 		if err := producer.LoadRecipientsUsingCsv(cfg.Data.CSVFilePath, EmailChannel); err != nil {
-			log.Fatalf("Error loading recipients: %v", err)
+			slog.Error("Error loading recipients!", "error", err)
 		}
 	}()
 
 	numWorkers := 10
+	slog.Info("Starting workers...", "numWorkers", numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go func(workerId int) {
 			defer wg.Done()
 			if err := consumer.EmailWorker(workerId, EmailChannel, cfg); err != nil {
-				log.Fatalf("Error processing recipients: %v", err)
+				slog.Error("Error processing recipients!", "error", err)
 			}
 		}(i)
 	}
 
 	wg.Wait()
+	slog.Info("All recipients processed successfully! 🎉")
 }

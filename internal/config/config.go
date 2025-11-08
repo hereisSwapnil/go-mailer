@@ -2,7 +2,7 @@ package config
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -44,12 +44,32 @@ func LoadConfig() *Config {
 
 	configPath := filepath.Join("config", fmt.Sprintf("%s.yaml", env))
 
-	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
-		log.Fatalf("failed to read config file %s: %v", configPath, err)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		slog.Error("Config file does not exist", "path", configPath)
+		os.Exit(1)
 	}
 
+	fileInfo, err := os.Stat(configPath)
+	if err != nil {
+		slog.Error("Failed to get config file info", "path", configPath, "error", err)
+		os.Exit(1)
+	}
+
+	if fileInfo.Size() == 0 {
+		slog.Error("Config file is empty", "path", configPath)
+		os.Exit(1)
+	}
+
+	// Read config file
+	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
+		slog.Error("Failed to read config file", "path", configPath, "error", err)
+		os.Exit(1)
+	}
+
+	// Validate config
 	if err := validate.Struct(cfg); err != nil {
-		log.Fatalf("configuration validation failed: %v", err)
+		slog.Error("Configuration validation failed", "error", err)
+		os.Exit(1)
 	}
 
 	return &cfg

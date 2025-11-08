@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"log/slog"
 	"net/smtp"
 
 	"github.com/hereisSwapnil/go-mailer/internal/config"
@@ -21,7 +22,7 @@ func EmailWorker(workerId int, emailChannel chan types.Recipient, cfg *config.Co
 	}
 
 	for recipient := range emailChannel {
-		fmt.Printf("Worker %d: Processing recipient %s\n", workerId, recipient.Name)
+		slog.Info("Worker: Processing recipient", "workerId", workerId, "recipient", recipient.Email)
 
 		// Prepare recipient specific data
 		data := map[string]interface{}{
@@ -53,6 +54,7 @@ func EmailWorker(workerId int, emailChannel chan types.Recipient, cfg *config.Co
 		if err != nil {
 			return fmt.Errorf("failed to send to %s: %w", recipient.Email, err)
 		}
+		slog.Info("Worker: Sent email to recipient", "workerId", workerId, "recipient", recipient.Email)
 	}
 
 	return nil
