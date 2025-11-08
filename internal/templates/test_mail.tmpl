@@ -1,0 +1,22 @@
+{{define "subject"}}{{ .Name }} - Welcome to our service!{{end}}
+
+{{/* Plain-text body (fallback) */}}
+{{define "default"}}
+Hi {{.Name}},
+
+Thank you for using our service.
+
+— The Go Mailer Team
+{{end}}
+
+{{/* HTML body */}}
+{{define "html"}}
+<!doctype html>
+<html>
+  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+    <p>Hi <strong>{{.Name}}</strong>,</p>
+    <p>Thank you for using our service.</p>
+    <p>— The Go Mailer Team</p>
+  </body>
+</html>
+{{end}}
