@@ -6,15 +6,16 @@ import (
 	"html/template"
 	"net/smtp"
 
+	"github.com/hereisSwapnil/go-mailer/internal/config"
 	"github.com/hereisSwapnil/go-mailer/internal/types"
 )
 
-func EmailWorker(workerId int, emailChannel chan types.Recipient) error {
+func EmailWorker(workerId int, emailChannel chan types.Recipient, cfg *config.Config) error {
 
-	auth := smtp.PlainAuth("", "8bp1alexgt1@gmail.com", "sewd omuo dyhc tfjh", "smtp.gmail.com")
+	auth := smtp.PlainAuth("", cfg.SMTP.Username, cfg.SMTP.Password, cfg.SMTP.Host)
 
 	// Parse the email template only once
-	t, err := template.ParseFiles("internal/templates/test_mail.tmpl")
+	t, err := template.ParseFiles(cfg.Templates.TestEmailTemplate)
 	if err != nil {
 		return err
 	}
@@ -47,8 +48,8 @@ func EmailWorker(workerId int, emailChannel chan types.Recipient) error {
 		message := []byte(subject + mime + bodyBuffer.String())
 
 		// Send to the actual recipient
-		to := []string{"8bp1alexgt1@gmail.com"}
-		err = smtp.SendMail("smtp.gmail.com:587", auth, "8bp1alexgt1@gmail.com", to, message)
+		to := []string{recipient.Email}
+		err = smtp.SendMail(fmt.Sprintf("%s:%d", cfg.SMTP.Host, cfg.SMTP.Port), auth, cfg.SMTP.From, to, message)
 		if err != nil {
 			return fmt.Errorf("failed to send to %s: %w", recipient.Email, err)
 		}

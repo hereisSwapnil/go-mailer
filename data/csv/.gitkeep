@@ -1,0 +1,20 @@
+# CSV Files Directory
+
+This directory contains CSV files for recipient data.
+
+## Structure
+
+- `recipients.csv` - Main recipients CSV file
+- Additional CSV files can be added here as needed
+
+## CSV Format
+
+The CSV file should have the following format:
+```
+Name, Email
+Name1, email1@example.com
+Name2, email2@example.com
+```
+
+Note: Ensure there are no leading/trailing spaces in the email addresses.
+

@@ -3,6 +3,7 @@ package producer
 import (
 	"encoding/csv"
 	"os"
+	"strings"
 
 	"github.com/hereisSwapnil/go-mailer/internal/types"
 )
@@ -24,8 +25,8 @@ func LoadRecipientsUsingCsv(filePath string, emailChannel chan types.Recipient) 
 
 	for _, record := range records[1:] {
 		emailChannel <- types.Recipient{
-			Name: record[0],
-			Email: record[1],
+			Name:  strings.TrimSpace(record[0]),
+			Email: strings.TrimSpace(record[1]),
 		}
 	}
 	return nil
