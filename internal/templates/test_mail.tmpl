@@ -1,22 +1,21 @@
-{{define "subject"}}{{ .Name }} - Welcome to our service!{{end}}
+{{define "subject"}}Test Email for {{.Name}}{{end}}
 
-{{/* Plain-text body (fallback) */}}
 {{define "default"}}
-Hi {{.Name}},
+Hello {{.Name}},
 
-Thank you for using our service.
+This is a test email sent to you as part of our system check.
 
-— The Go Mailer Team
+Best regards,
+Go Mailer Team
 {{end}}
 
-{{/* HTML body */}}
 {{define "html"}}
 <!doctype html>
 <html>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
-    <p>Hi <strong>{{.Name}}</strong>,</p>
-    <p>Thank you for using our service.</p>
-    <p>— The Go Mailer Team</p>
+    <p>Hello <strong>{{.Name}}</strong>,</p>
+    <p>This is a test email sent to you as part of our system check.</p>
+    <p>Best regards,<br />Go Mailer Team</p>
   </body>
 </html>
 {{end}}
