@@ -194,3 +194,6 @@ go-mailer/
 └── README.md
 ```
 
+## Architecture
+
+[![image.png](https://i.postimg.cc/439Lxc8H/image.png)](https://postimg.cc/hJKbCXRK)
