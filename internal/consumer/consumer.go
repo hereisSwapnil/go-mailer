@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/smtp"
+	"strings"
 	"time"
 
 	"github.com/hereisSwapnil/go-mailer/internal/config"
@@ -24,7 +25,17 @@ func EmailWorker(workerId int, emailChannel chan types.Recipient, cfg *config.Co
 		slog.Info("Processing recipient", "workerId", workerId, "email", recipient.Email)
 
 		data := map[string]interface{}{
-			"Name": recipient.Name,
+			"Name":  recipient.Name,
+			"Email": recipient.Email,
+		}
+
+		// Add any extra fields to the template data with capitalized first letter
+		for key, value := range recipient.Extra {
+			// Capitalize first letter for template access (e.g., "coupon" -> "Coupon")
+			if len(key) > 0 {
+				capitalizedKey := strings.ToUpper(key[:1]) + key[1:]
+				data[capitalizedKey] = value
+			}
 		}
 
 		var subjectBuffer bytes.Buffer

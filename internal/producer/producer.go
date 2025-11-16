@@ -39,11 +39,40 @@ func LoadRecipientsUsingCsv(filePath string, emailChannel chan types.Recipient) 
 		return err
 	}
 
+	if len(records) == 0 {
+		return nil
+	}
+
+	// Get header row to map column names
+	headers := records[0]
+	headerMap := make(map[string]int)
+	for i, header := range headers {
+		headerMap[strings.ToLower(strings.TrimSpace(header))] = i
+	}
+
+	// Process data rows
 	for _, record := range records[1:] {
-		emailChannel <- types.Recipient{
-			Name:  strings.TrimSpace(record[0]),
-			Email: strings.TrimSpace(record[1]),
+		recipient := types.Recipient{
+			Extra: make(map[string]string),
 		}
+
+		// Extract Name and Email (required fields)
+		if nameIdx, ok := headerMap["name"]; ok && nameIdx < len(record) {
+			recipient.Name = strings.TrimSpace(record[nameIdx])
+		}
+		if emailIdx, ok := headerMap["email"]; ok && emailIdx < len(record) {
+			recipient.Email = strings.TrimSpace(record[emailIdx])
+		}
+
+		// Store any other fields in Extra map
+		for i, header := range headers {
+			headerLower := strings.ToLower(strings.TrimSpace(header))
+			if i < len(record) && headerLower != "name" && headerLower != "email" {
+				recipient.Extra[headerLower] = strings.TrimSpace(record[i])
+			}
+		}
+
+		emailChannel <- recipient
 	}
 	return nil
 }

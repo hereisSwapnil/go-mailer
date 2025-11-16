@@ -8,9 +8,10 @@ The application reads recipient data from a CSV file, processes them through mul
 
 ## Features
 
-- Reads recipients from CSV files
+- Reads recipients from CSV files with dynamic column support
 - Concurrent email sending using worker pools
 - HTML email templates with subject and body
+- Dynamic template variables from CSV columns
 - Retry logic with exponential backoff
 - Environment-based configuration
 - Structured logging
@@ -88,17 +89,29 @@ retry:
 
 ## CSV Format
 
-The CSV file should have a header row and two columns:
+The CSV file should have a header row with at least two required columns: `Name` and `Email`. Additional columns are supported and will be automatically available in email templates.
+
+**Required columns:**
+- `Name`: Recipient's name
+- `Email`: Recipient's email address
+
+**Optional columns:**
+- Any additional columns (e.g., `Coupon`, `Discount`, `ExpiryDate`) will be automatically available in templates
+
+Example CSV file:
 
 ```csv
-Name, Email
-John Doe, john@example.com
-Jane Smith, jane@example.com
+Name, Email, Coupon
+John Doe, john@example.com, JOHN1000
+Jane Smith, jane@example.com, JANE2000
+Bob Johnson, bob@example.com, BOB3000
 ```
 
-The first row is treated as a header and skipped. Each subsequent row should contain:
-1. Name (column 0)
-2. Email address (column 1)
+**Notes:**
+- The first row is treated as a header and is skipped during processing
+- Column names are case-insensitive (e.g., "Name", "name", "NAME" are all valid)
+- Additional columns beyond Name and Email are stored and accessible in templates with the first letter capitalized (e.g., "Coupon" column → `{{.Coupon}}` in template)
+- Column order doesn't matter; the application automatically maps columns by header name
 
 Example file: `data/csv/recipients.csv`
 
@@ -112,22 +125,33 @@ Email templates use Go's `html/template` package. Templates must define two sect
 Example template (`internal/templates/test_mail.tmpl`):
 
 ```html
-{{define "subject"}}Test Email for {{.Name}}{{end}}
+{{define "subject"}}Thank you for joining, {{.Name}}. Here is your coupon{{end}}
 
 {{define "html"}}
 <!doctype html>
 <html>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
     <p>Hello <strong>{{.Name}}</strong>,</p>
-    <p>This is a test email sent to you as part of our system check.</p>
-    <p>Best regards,<br />Go Mailer Team</p>
+    <p>Thank you for joining us. We are glad to welcome you.</p>
+    <p>Your coupon code is:</p>
+    <p style="font-size: 20px; font-weight: bold;">{{.Coupon}}</p>
+    <p>Enjoy your shopping.</p>
+    <p>Warm regards,<br />Go Mailer Team</p>
   </body>
 </html>
 {{end}}
 ```
 
-Template variables:
-- `.Name`: Recipient name from CSV
+**Template variables:**
+- `.Name`: Recipient name from CSV (required)
+- `.Email`: Recipient email address from CSV (required)
+- `.Coupon`: Any additional CSV column (e.g., if CSV has "Coupon" column)
+- `.{ColumnName}`: All CSV columns are automatically available in templates with the first letter capitalized
+
+**Note:** Any column in your CSV file (beyond Name and Email) can be accessed in templates using `{{.ColumnName}}` where `ColumnName` matches the CSV header with the first letter capitalized. For example:
+- CSV column "Coupon" → `{{.Coupon}}` in template
+- CSV column "Discount" → `{{.Discount}}` in template
+- CSV column "ExpiryDate" → `{{.ExpiryDate}}` in template
 
 ## Usage
 
@@ -154,11 +178,16 @@ go build -o go-mailer cmd/go-mailer/main.go
 
 1. **Configuration Loading**: The application loads configuration from `config/{ENV}.yaml` and validates all required fields.
 
-2. **Producer**: A goroutine reads the CSV file and sends recipient data to a channel, skipping the header row.
+2. **Producer**: A goroutine reads the CSV file and sends recipient data to a channel. It:
+   - Parses the header row to map column names dynamically
+   - Extracts required fields (Name, Email) and all additional columns
+   - Stores additional columns for template access
+   - Skips the header row when processing data
 
 3. **Workers**: By default, 10 worker goroutines consume from the channel. Each worker:
-   - Loads the email template
+   - Loads the email template once
    - Processes each recipient from the channel
+   - Builds template data with Name, Email, and all additional CSV columns (with capitalized first letters)
    - Renders the template with recipient data
    - Sends the email via SMTP
    - Retries on failure with exponential backoff

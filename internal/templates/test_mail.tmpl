@@ -1,11 +1,16 @@
-{{define "subject"}}Test Email for {{.Name}}{{end}}
+{{define "subject"}}Thank you for joining, {{.Name}}. Here is your coupon{{end}}
 
 {{define "default"}}
 Hello {{.Name}},
 
-This is a test email sent to you as part of our system check.
+Thank you for joining us. We are excited to have you with us.
 
-Best regards,
+Here is your coupon code:
+{{.Coupon}}
+
+Enjoy your shopping.
+
+Warm regards,
 Go Mailer Team
 {{end}}
 
@@ -14,8 +19,11 @@ Go Mailer Team
 <html>
   <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
     <p>Hello <strong>{{.Name}}</strong>,</p>
-    <p>This is a test email sent to you as part of our system check.</p>
-    <p>Best regards,<br />Go Mailer Team</p>
+    <p>Thank you for joining us. We are glad to welcome you.</p>
+    <p>Your coupon code is:</p>
+    <p style="font-size: 20px; font-weight: bold;">{{.Coupon}}</p>
+    <p>Enjoy your shopping.</p>
+    <p>Warm regards,<br />Go Mailer Team</p>
   </body>
 </html>
 {{end}}

@@ -27,7 +27,7 @@ func main() {
 		}
 	}()
 
-	numWorkers := 10
+	numWorkers := 20
 	slog.Info("Starting workers...", "numWorkers", numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
